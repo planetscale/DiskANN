@@ -1,17 +1,8 @@
 // TODO
 // CHECK COSINE ON LINUX
 
-#ifdef _WINDOWS
-#include <immintrin.h>
-#include <smmintrin.h>
-#include <tmmintrin.h>
-#include <intrin.h>
-#else
-#include <immintrin.h>
-#endif
 
 #include "simd_utils.h"
-#include <cosine_similarity.h>
 #include <iostream>
 
 #include "distance.h"
@@ -119,7 +110,7 @@ float SlowDistanceCosineUInt8::compare(const uint8_t *a, const uint8_t *b, uint3
 float DistanceL2Int8::compare(const int8_t *a, const int8_t *b, uint32_t size) const
 {
 #ifdef _WINDOWS
-#ifdef USE_AVX2
+#ifdef __AVX2__
     __m256 r = _mm256_setzero_ps();
     char *pX = (char *)a, *pY = (char *)b;
     while (size >= 32)
@@ -184,7 +175,7 @@ float DistanceL2Float::compare(const float *a, const float *b, uint32_t size) co
 #endif
 
     float result = 0;
-#ifdef USE_AVX2
+#ifdef __AVX2__
     // assume size is divisible by 8
     uint16_t niters = (uint16_t)(size / 8);
     __m256 sum = _mm256_setzero_ps();
@@ -310,7 +301,7 @@ template <typename T> float DistanceInnerProduct<T>::inner_product(const T *a, c
     float result = 0;
 
 #ifdef __GNUC__
-#ifdef USE_AVX2
+#ifdef __AVX2__
 #define AVX_DOT(addr1, addr2, dest, tmp1, tmp2)                                                                        \
     tmp1 = _mm256_loadu_ps(addr1);                                                                                     \
     tmp2 = _mm256_loadu_ps(addr2);                                                                                     \
@@ -386,16 +377,16 @@ template <typename T> float DistanceInnerProduct<T>::inner_product(const T *a, c
 #else
 
     float dot0, dot1, dot2, dot3;
-    const float *last = a + size;
-    const float *unroll_group = last - 3;
+    const T *last = a + size;
+    const T *unroll_group = last - 3;
 
     /* Process 4 items with each loop for efficiency. */
     while (a < unroll_group)
     {
-        dot0 = a[0] * b[0];
-        dot1 = a[1] * b[1];
-        dot2 = a[2] * b[2];
-        dot3 = a[3] * b[3];
+        dot0 = static_cast<float>(a[0]) * static_cast<float>(b[0]);
+        dot1 = static_cast<float>(a[1]) * static_cast<float>(b[1]);
+        dot2 = static_cast<float>(a[2]) * static_cast<float>(b[2]);
+        dot3 = static_cast<float>(a[3]) * static_cast<float>(b[3]);
         result += dot0 + dot1 + dot2 + dot3;
         a += 4;
         b += 4;
@@ -403,7 +394,7 @@ template <typename T> float DistanceInnerProduct<T>::inner_product(const T *a, c
     /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
     while (a < last)
     {
-        result += *a++ * *b++;
+        result += static_cast<float>(*a++) * static_cast<float>(*b++);
     }
 #endif
 #endif
@@ -494,23 +485,23 @@ template <typename T> float DistanceFastL2<T>::norm(const T *a, uint32_t size) c
     result += unpack[0] + unpack[1] + unpack[2] + unpack[3];
 #else
     float dot0, dot1, dot2, dot3;
-    const float *last = a + size;
-    const float *unroll_group = last - 3;
+    const T *last = a + size;
+    const T *unroll_group = last - 3;
 
     /* Process 4 items with each loop for efficiency. */
     while (a < unroll_group)
     {
-        dot0 = a[0] * a[0];
-        dot1 = a[1] * a[1];
-        dot2 = a[2] * a[2];
-        dot3 = a[3] * a[3];
+        dot0 = static_cast<float>(a[0]) * static_cast<float>(a[0]);
+        dot1 = static_cast<float>(a[1]) * static_cast<float>(a[1]);
+        dot2 = static_cast<float>(a[2]) * static_cast<float>(a[2]);
+        dot3 = static_cast<float>(a[3]) * static_cast<float>(a[3]);
         result += dot0 + dot1 + dot2 + dot3;
         a += 4;
     }
     /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
     while (a < last)
     {
-        result += (*a) * (*a);
+        result += static_cast<float>(*a) * static_cast<float>(*a);
         a++;
     }
 #endif
@@ -522,6 +513,9 @@ template <typename T> float DistanceFastL2<T>::norm(const T *a, uint32_t size) c
 float AVXDistanceInnerProductFloat::compare(const float *a, const float *b, uint32_t size) const
 {
     float result = 0.0f;
+
+// TODO@vmg: non-vectorial fallback for this code
+#ifdef __AVX__
 #define AVX_DOT(addr1, addr2, dest, tmp1, tmp2)                                                                        \
     tmp1 = _mm256_loadu_ps(addr1);                                                                                     \
     tmp2 = _mm256_loadu_ps(addr2);                                                                                     \
@@ -557,6 +551,7 @@ float AVXDistanceInnerProductFloat::compare(const float *a, const float *b, uint
     }
     _mm256_storeu_ps(unpack, sum);
     result = unpack[0] + unpack[1] + unpack[2] + unpack[3] + unpack[4] + unpack[5] + unpack[6] + unpack[7];
+#endif
 
     return -result;
 }

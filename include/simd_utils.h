@@ -5,12 +5,13 @@
 #include <smmintrin.h>
 #include <tmmintrin.h>
 #include <intrin.h>
-#else
+#elif defined(__AVX2__) || defined(__AVX__) || defined(__SSE2__)
 #include <immintrin.h>
 #endif
 
 namespace diskann
 {
+#ifdef __AVX__
 static inline __m256 _mm256_mul_epi8(__m256i X)
 {
     __m256i zero = _mm256_setzero_si256();
@@ -22,7 +23,9 @@ static inline __m256 _mm256_mul_epi8(__m256i X)
 
     return _mm256_cvtepi32_ps(_mm256_add_epi32(_mm256_madd_epi16(xlo, xlo), _mm256_madd_epi16(xhi, xhi)));
 }
+#endif
 
+#ifdef __SSE2__
 static inline __m128 _mm_mulhi_epi8(__m128i X)
 {
     __m128i zero = _mm_setzero_si128();
@@ -70,7 +73,9 @@ static inline __m128 _mm_mul32_pi8(__m128i X, __m128i Y)
     __m128i xlo = _mm_cvtepi8_epi16(X), ylo = _mm_cvtepi8_epi16(Y);
     return _mm_cvtepi32_ps(_mm_unpacklo_epi32(_mm_madd_epi16(xlo, ylo), _mm_setzero_si128()));
 }
+#endif
 
+#ifdef __AVX2__
 static inline __m256 _mm256_mul_epi8(__m256i X, __m256i Y)
 {
     __m256i zero = _mm256_setzero_si256();
@@ -103,4 +108,5 @@ static inline float _mm256_reduce_add_ps(__m256 x)
     /* Conversion to float is a no-op on x86-64 */
     return _mm_cvtss_f32(x32);
 }
+#endif
 } // namespace diskann

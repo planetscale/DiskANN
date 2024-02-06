@@ -4,9 +4,11 @@
 #include <limits>
 #include <malloc.h>
 #include <math_utils.h>
-#include <mkl.h>
+#include <cblas.h>
 #include "logger.h"
 #include "utils.h"
+
+#define MKL_INT int
 
 namespace math_utils
 {

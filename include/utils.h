@@ -20,6 +20,7 @@ typedef HANDLE FileHandle;
 typedef int FileHandle;
 #endif
 
+#include "simd_utils.h"
 #include "distance.h"
 #include "logger.h"
 #include "cached_io.h"
@@ -989,17 +990,21 @@ inline void copy_aligned_data_from_file(const char *bin_file, T *&data, size_t &
 // NOTE :: good efficiency when total_vec_size is integral multiple of 64
 inline void prefetch_vector(const char *vec, size_t vecsize)
 {
+#ifdef __SSE2__
     size_t max_prefetch_size = (vecsize / 64) * 64;
     for (size_t d = 0; d < max_prefetch_size; d += 64)
         _mm_prefetch((const char *)vec + d, _MM_HINT_T0);
+#endif
 }
 
 // NOTE :: good efficiency when total_vec_size is integral multiple of 64
 inline void prefetch_vector_l2(const char *vec, size_t vecsize)
 {
+#ifdef __SSE2__
     size_t max_prefetch_size = (vecsize / 64) * 64;
     for (size_t d = 0; d < max_prefetch_size; d += 64)
         _mm_prefetch((const char *)vec + d, _MM_HINT_T1);
+#endif
 }
 
 // NOTE: Implementation in utils.cpp.

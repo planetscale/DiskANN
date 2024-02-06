@@ -7,7 +7,6 @@
 #include "pq.h"
 #include "pq_scratch.h"
 #include "pq_flash_index.h"
-#include "cosine_similarity.h"
 
 #ifdef _WINDOWS
 #include "windows_aligned_file_reader.h"
@@ -1322,7 +1321,9 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
 
     // pointers to buffers for data
     T *data_buf = query_scratch->coord_scratch;
+#ifdef __SSE2__
     _mm_prefetch((char *)data_buf, _MM_HINT_T1);
+#endif
 
     // sector scratch
     char *sector_scratch = query_scratch->sector_scratch;
